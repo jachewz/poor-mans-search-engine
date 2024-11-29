@@ -1,10 +1,8 @@
 [package]
-name = "redis-search"
+name = "searcher"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-once_cell = "1.19.0"
-rand = "0.8.5"
-redis = "0.26.1"
 regex = "1.10.6"
+stop-words = "0.8.0"
