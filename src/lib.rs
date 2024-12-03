@@ -5,7 +5,7 @@ struct Document {
     nterms: i32, // number of terms (filtered words) in the document
 }
 
-struct Searcher {
+pub struct Searcher {
     index: HashMap<String, HashMap<String, i32>>, // term -> doc_id -> count
     docs: HashMap<String, Document>,              // doc_id -> document
     avdl: f32,                                    // average document length
@@ -25,6 +25,12 @@ fn normalize_string(s: &str) -> String {
         .filter(|word| !stop_words_eng.contains(&word.to_string()))
         .collect::<Vec<&str>>()
         .join(" ")
+}
+
+impl Default for Searcher {
+    fn default() -> Self {
+        Searcher::new()
+    }
 }
 
 impl Searcher {
@@ -93,12 +99,6 @@ impl Searcher {
     }
 
     fn bm25(&self, term: &str) -> HashMap<String, f32> {
-
-        println!("term: {}", term);
-        println!("index: {:?}", self.index);
-        println!("avdl: {}", self.avdl);
-        println!("index.get(term): {:?}", self.index.get(term));
-
         match self.index.get(term) {
             None => HashMap::new(),
             Some(docs) => {
@@ -112,7 +112,6 @@ impl Searcher {
                         let numerator = tf * (self.k1 + 1.0);
                         let denominator = self.k1 * ((1.0 - self.b) + self.b * (dl / self.avdl));
 
-                        println!("doc_id: {}, idf: {}, numerator: {}, denominator: {}", doc_id, idf, numerator, denominator);
                         (doc_id.to_string(), idf * numerator / denominator)
                     })
                     .collect()
