@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use clap::Parser;
+use glob::{glob, Pattern};
 
 use searcher::Searcher;
 
@@ -7,31 +8,27 @@ use searcher::Searcher;
 #[command(version, about)]
 struct Cli {
     query: String,
-    path: std::path::PathBuf,
+    path: String,
 }
 
 fn main() -> Result<()> {
     let args = Cli::parse();
 
-    let mut filepath = args.path;
+    let path = args.path;
 
-    if filepath == std::path::PathBuf::from("") {
-        filepath = std::path::PathBuf::from(".");
-    }
-
-    let directory = std::fs::read_dir(&filepath)
-        .with_context(|| format!("could not read directory `{:?}`", &filepath))?;
+    let directory =
+        glob(&path).with_context(|| format!("could not read directory `{:?}`", &path))?;
 
     let mut searcher = Searcher::new();
 
     for entry in directory {
         let entry =
-            entry.with_context(|| format!("error while reading directory `{:?}`", &filepath))?;
+            entry.with_context(|| format!("error while reading directory `{:?}`", &path))?;
 
         // TODO: handle symlinks and directories
-        match entry
-            .file_type()
-            .with_context(|| format!("could not get file type of `{:?}`", &entry.path()))?
+        let metadata = entry.metadata()
+            .with_context(|| format!("could not get metadata of `{:?}`", &entry.as_path()))?;
+        match metadata.file_type()
         {
             t if t.is_file() => (),
             t if t.is_dir() => continue,
@@ -39,13 +36,13 @@ fn main() -> Result<()> {
             _ => continue,
         }
 
-        let file_name_os_str = entry.file_name();
-        let filename = file_name_os_str.to_string_lossy();
+        let filepath = entry.as_path();
+        let filepath_str = filepath.to_str().with_context(|| format!("could not convert path `{:?}` to string", filepath))?;
 
-        let contents = std::fs::read_to_string(entry.path())
-            .with_context(|| format!("could not read file `{:?}`", filename))?;
+        let contents = std::fs::read_to_string(filepath)
+            .with_context(|| format!("could not read file `{:?}`", filepath))?;
 
-        searcher.add_document(&filename, &contents);
+        searcher.add_document(filepath_str, &contents);
     }
 
     let results = searcher.search(&args.query);
