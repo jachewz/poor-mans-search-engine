@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use clap::Parser;
-use glob::{glob, Pattern};
+use walkdir::WalkDir;
 
 use searcher::Searcher;
 
@@ -16,8 +16,7 @@ fn main() -> Result<()> {
 
     let path = args.path;
 
-    let directory =
-        glob(&path).with_context(|| format!("could not read directory `{:?}`", &path))?;
+    let directory = WalkDir::new(&path);
 
     let mut searcher = Searcher::new();
 
@@ -25,9 +24,10 @@ fn main() -> Result<()> {
         let entry =
             entry.with_context(|| format!("error while reading directory `{:?}`", &path))?;
 
+        println!("entry: {:?}", entry);
         // TODO: handle symlinks and directories
         let metadata = entry.metadata()
-            .with_context(|| format!("could not get metadata of `{:?}`", &entry.as_path()))?;
+            .with_context(|| format!("could not get metadata of `{:?}`", &entry.path()))?;
         match metadata.file_type()
         {
             t if t.is_file() => (),
@@ -36,13 +36,12 @@ fn main() -> Result<()> {
             _ => continue,
         }
 
-        let filepath = entry.as_path();
+        let filepath = entry.path();
         let filepath_str = filepath.to_str().with_context(|| format!("could not convert path `{:?}` to string", filepath))?;
 
-        let contents = std::fs::read_to_string(filepath)
-            .with_context(|| format!("could not read file `{:?}`", filepath))?;
-
-        searcher.add_document(filepath_str, &contents);
+        if let Ok(contents) = std::fs::read_to_string(filepath) {  // ignore non-utf8 files
+            searcher.add_document(filepath_str, &contents);
+        }
     }
 
     let results = searcher.search(&args.query);
