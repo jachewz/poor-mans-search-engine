@@ -54,7 +54,10 @@ impl Searcher {
             nterms += 1;
             let term = term.to_string();
             let doc_index = self.index.entry(term).or_default();
-            doc_index.entry(doc_id.to_string()).and_modify(|x| *x += 1).or_insert(1);
+            doc_index
+                .entry(doc_id.to_string())
+                .and_modify(|x| *x += 1)
+                .or_insert(1);
         }
 
         self.docs.insert(
@@ -88,12 +91,11 @@ impl Searcher {
     fn idf(&self, term: &str) -> f32 {
         let docs_count = self.docs.len() as f32;
 
-        
         let docs_with_term_count = match self.index.get(term) {
             None => 0 as f32,
             Some(docs) => docs.len() as f32,
         };
-    
+
         // idf smooth variant
         ((docs_count - docs_with_term_count + 0.5) / (docs_with_term_count + 0.5) + 1.0).ln()
     }

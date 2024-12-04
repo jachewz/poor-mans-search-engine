@@ -25,10 +25,14 @@ fn main() -> Result<()> {
     let mut searcher = Searcher::new();
 
     for entry in directory {
-        let entry = entry.with_context(|| format!("error while reading directory `{:?}`", &filepath))?;
+        let entry =
+            entry.with_context(|| format!("error while reading directory `{:?}`", &filepath))?;
 
         // TODO: handle symlinks and directories
-        match entry.file_type().with_context(|| format!("could not get file type of `{:?}`", &entry.path()))? {
+        match entry
+            .file_type()
+            .with_context(|| format!("could not get file type of `{:?}`", &entry.path()))?
+        {
             t if t.is_file() => (),
             t if t.is_dir() => continue,
             t if t.is_symlink() => continue,
@@ -37,16 +41,20 @@ fn main() -> Result<()> {
 
         let file_name_os_str = entry.file_name();
         let filename = file_name_os_str.to_string_lossy();
-        
-        let contents = std::fs::read_to_string(entry.path()).with_context(|| format!("could not read file `{:?}`", filename))?;
 
-         searcher.add_document(&filename, &contents);
+        let contents = std::fs::read_to_string(entry.path())
+            .with_context(|| format!("could not read file `{:?}`", filename))?;
+
+        searcher.add_document(&filename, &contents);
     }
 
     let results = searcher.search(&args.query);
-    
+
     if results.is_empty() {
-        return Err(anyhow::anyhow!(format!("No results found for query: {}", args.query)));
+        return Err(anyhow::anyhow!(format!(
+            "No results found for query: {}",
+            args.query
+        )));
     }
 
     for (doc_id, score) in results {
